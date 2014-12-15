@@ -8,6 +8,8 @@ It allows for defining validation of various fields sent to the service when add
 
 Even though the format has been inspired by Collection+JSON it is not directly compatible.
 
+Whereas Collection+JSON uses a name/value format for the data, this format uses anonymous objects, which takes up less space and amounts to less parsing and manipulation for the client.
+
 #### Author:
 
 Torben Rahbek Koch (torben@rahbekkoch.dk)
@@ -22,35 +24,39 @@ The format is a JSON-based format with several optional fields:
 
 ```json
 {
-  "collection" :
+  "compactcollection" :       // REQUIRED: "compactcollection" to distinguish from Collection+JSON, even though the Content Type should ensure that.
   {
     "version" : "1.0",        // OPTIONAL: The version of the format. If missing it **MUST** default to *"1.0"*
-    "href"    : URI,          // OPTIONAL: The uri of the document. If missing it MUST default to the uri used to request the document.
+    "href"    : URI,          // OPTIONAL: The uri of the entire document. If missing it MUST default to the uri used to request the document.
     "links"   : [LINK],       // OPTIONAL: Navigational links
-    "items"   : [ITEM],       // OPTIONAL: The data. MUST default to no data.
+    "items"   : [ITEM],       // OPTIONAL: The data. MUST default to NULL.
     "queries" : [QUERY],      // OPTIONAL: Query templates
     "itemtemplate" : ITEMTEMPLATE,  // OPTIONAL: A description of a item in "items"
     "writetemplate" : WRITETEMPLATE, // OPTIONAL: A description of add and update statements  
+    "error"         : ERROR          // OPTIONAL: A description of any error that caused a request to fail
   }
 }
 ```
+If none of the **OPTIONAL** elements are present, *"items"* MUST default to NULL.
 
-### "items"
+### "items" : [ITEM]
 
 The "items" field is an array of ITEM elements. It is a child property of "collection". Each ITEM is an anonymous object:
 
 ```json
 {
-  "href"  : URI,                       // REQUIRED: The uri to use to request this specific ITEM.
+  "href"  : URI,                       // RECOMMENDED: The uri to use to address this specific ITEM.
   "links" : [LINK],                    // OPTIONAL: Navigational links for this item
-  "data"  : OBJECT                      // OPTIONAL: The actual data laid out as described by "itemtemplate". MUST default to NULL.
+  "data"  : OBJECT                     // OPTIONAL: The actual data laid out as described by "itemtemplate". MUST default to NULL.
 }
 
 ```
 
-### "links"
+**Note!** The **RECOMMENDED** state means that it really **SHOULD** be there but the originator **MAY** choose to leave it out, because the ITEM is, for some reason, not individually addressable. This also means that the ITEM is not writable.
 
-The "links" field is an array of LINK elements. It is a child property of "collection" or ITEM elements. Each LINK element is a navigational item, which - using Micoformats rel values - describes how to navigate on from the document or ITEM.
+### "links" : [LINK]
+
+The "links" field is an array of LINK elements. It is a child property of "collection" or ITEM elements. Each LINK element is a navigational item, which - using Micoformats rel values - describes how to navigate onwards from the document or ITEM.
 
 Each LINK is an anonomous object:
 
@@ -187,17 +193,16 @@ When an error happens on the server, it is vital to be able to advise the user o
 [HTTP status code](http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html)
 
 ```json
-  "error":
+  "error":                                        // OPTIONAL
   {
-    "code"       : STRING,                        // REQUIRED: The HTTP status code, which should be the same as returned in the HTTP document containing the JSON
+    "code"       : INT,                           // REQUIRED: The HTTP status code, which **SHOULD** be the same as returned in the HTTP document containing the JSON
     "message"    : STRING,                        // OPTIONAL: User friendly description of the problem
     "errorclass" : STRING,                        // OPTIONAL: The error class, default **MUST** be "UNRECOVERABLE"
     "detailedErrorClass" : STRING,                // OPTIONAL: Detailed error class, e.g. "TIMEOUT", default is empty
     "messageid"  : STRING,                        // OPTIONAL: Message/log id for the log message which may have been logged for the error, can be used to correlate interaction with support.
     "correlationid" : STRING,                     // OPTIONAL: message/log correlation id for the log message which may have been logged for the error",
-
-    "extended" : OBJECT                           // OPTIONAL: extended error data, the contents of which depends on *"detailederrorclass"*
-
+    "extended"   : OBJECT,                        // OPTIONAL: extended error data, the contents of which depends on *"detailederrorclass"*
+    "links"      : [LINK]                         // OPTIONAL: Navigational links to aid the client in escaping the error.
   }
 ```
 
