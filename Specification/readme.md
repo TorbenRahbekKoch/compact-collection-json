@@ -24,20 +24,20 @@ The format is a JSON-based format with several optional fields:
 
 ```json
 {
-  "compactcollection" :       // REQUIRED: "compactcollection" to distinguish from Collection+JSON, even though the Content Type should ensure that.
+  "compactcollection" :                  // REQUIRED: "compactcollection" to distinguish from Collection+JSON, even though the Content Type should ensure that.
   {
-    "version" : "1.0",        // OPTIONAL: The version of the format. If missing it **MUST** default to *"1.0"*
-    "href"    : URI,          // OPTIONAL: The uri of the entire document. If missing it MUST default to the uri used to request the document.
-    "links"   : [LINK],       // OPTIONAL: Navigational links
-    "items"   : [ITEM],       // OPTIONAL: The data. MUST default to NULL.
-    "queries" : [QUERY],      // OPTIONAL: Query templates
-    "itemtemplate" : ITEMTEMPLATE,  // OPTIONAL: A description of a item in "items"
-    "writetemplate" : WRITETEMPLATE, // OPTIONAL: A description of add and update statements  
-    "error"         : ERROR          // OPTIONAL: A description of any error that caused a request to fail
+    "version"         : "1.0",           // OPTIONAL: The version of the format. If missing it **MUST** default to *"1.0"*
+    "href"            : URI,             // OPTIONAL: The uri of the entire document. If missing it MUST default to the uri used to request the document.
+    "links"           : [LINK],          // OPTIONAL: Navigational links
+    "items"           : [ITEM],          // OPTIONAL: The data. MUST default to an empty array.
+    "itemtemplate"    : ITEMTEMPLATE,    // OPTIONAL: A description of an item in "items"
+    "writetemplates"  : [WRITETEMPLATE], // OPTIONAL: A description of add and update (generally POST and PUT) statements  
+    "querytemplates"  : [QUERYTEMPLATE], // OPTIONAL: Query templates
+    "error"           : ERROR            // OPTIONAL: A description of any error that caused a request to fail
   }
 }
 ```
-If none of the **OPTIONAL** elements are present, *"items"* MUST default to NULL.
+If none of the **OPTIONAL** elements are present, *"items"* MUST default to an empty array.
 
 ### "items" : [ITEM]
 
@@ -47,7 +47,7 @@ The "items" field is an array of ITEM elements. It is a child property of "colle
 {
   "href"  : URI,                       // RECOMMENDED: The uri to use to address this specific ITEM.
   "links" : [LINK],                    // OPTIONAL: Navigational links for this item
-  "data"  : OBJECT                     // OPTIONAL: The actual data laid out as described by "itemtemplate". MUST default to NULL.
+  "data"  : OBJECT                     // OPTIONAL: The actual data laid out as described by ITEMTEMPLATE. MUST default to NULL.
 }
 
 ```
@@ -63,7 +63,8 @@ Each LINK is an anonomous object:
 ```json
 {
   href : URI,                   // REQUIRED: The uri to navigate to
-  rel  : STRING,                // REQUIRED: The microformat rel value
+  rel  : STRING,                // REQUIRED: The microformat rel value -
+  writetemplate : STRING        // OPTIONAL: The name of WRITETEMPLATE that describes the data to send to "href"
 }
 ```
 
@@ -72,42 +73,43 @@ Each LINK is an anonomous object:
 Templates are at the heart of this specification. They are used to describe:
 
 - *"itemtemplate"* - The individual items returned from the service
-- *"writetemplate"* - The data to send when an item should be added or updated
+- *"writetemplate"* - The data to send when data should be added or updated
 - *"querytemplate"* - The data to send when querying the service for data.
 
-##### "itemtemplate"
+##### "itemtemplate" : ITEMTEMPLATE
 
-An *"itemtemplate"* describes a record as it is retrieved from the server.
+An *ITEMTEMPLATE* describes a record as it is retrieved from the server.
 
 ```json
   "itemtemplate" :
   {
-    "href" : URI, // URI to obtain the entire "itemtemplate" as an individual data
-    "fields" :
+    "href" : URI,                                       // OPTIONAL : URI to GET the entire ITEMTEMPLATE as individual data
+    "fields" :                                          // OPTIONAL : The description of the fields of the ITEMTEMPLATE
     [
       {
-        "prompt" : STRING,                              // OPTIONAL: A user friendly display name for the field
-        "name"   : STRING,                              // REQUIRED: A system name for the field
-        "value"  : DATETIME/STRING/NUMBER/URI/BOOL/NULL // OPTIONAL: The value of the field, missing equals NULL.
-        "type"   : TYPE                                 // REQUIRED: The type of the field
+        "prompt" : STRING,                              // OPTIONAL : A user friendly display name for the field
+        "name"   : STRING,                              // REQUIRED : A system name for the field
+        "value"  : DATETIME/STRING/NUMBER/URI/BOOL/NULL // OPTIONAL : The default value of the field, if not given in "data", missing equals NULL.
+        "type"   : TYPE                                 // OPTIONAL : The type of the field, *DEFAULT* is *STRING*.
       }
     ]
   }
 ```
-
-**AT LEAST ONE** of the fields *"href"* and *"fields"* **MUST** be given. If both fields are given, the *"fields"* entry **MUST** take precedence over *"href"*. It is **RECOMMENDED** to only have one of the fields.
+Even though both "href" and "fields" are listed as **OPTIONAL** it is **REQUIRED** to have **AT LEAST ONE** of them. It is, however, **RECOMMENDED** to have only "href" to which a GET should return a compactcollection+json document with just this one ITEMTEMPLATE. If both fields are given, the *"fields"* entry **MUST** take precedence over *"href"*. It is **RECOMMENDED** to only have one of the fields.
 
 Using just the *"href"* field allows the client to download and cache the template for future use.
 
-##### "writetemplate"
+##### "writetemplates" : [WRITETEMPLATE]
 
-A *"writetemplate"* is an extension of the *"itemtemplate"* with optional validation descriptions for the data to send to the service.
+A *WRITETEMPLATE* is an extension of the *"itemtemplate"* with optional validation descriptions for the data to send to the service.
 
 ```json
   "writetemplate" :
-    {
-      "href"   : URI, // URI to obtain the entire writetemplate as an individual data
-      "fields" :
+  {
+      "name"   : STRING,                                  // REQUIRED : A unique (in [WRITETEMPLATE]) name, which can be referred to from a LINK.
+      "href"   : URI,                                     // OPTIONAL : URI to GET this WRITETEMPLATE as individual data
+      "method" : STRING,                                  // OPTIONAL : "POST" or "PUT" - which HTTP method to use when sending data.
+      "fields" :                                          // OPTIONAL : The description of the fields of the WRITETEMPLATE
       [
         {
           "prompt" : STRING,                              // OPTIONAL: A user friendly display name for the field
@@ -122,24 +124,25 @@ A *"writetemplate"* is an extension of the *"itemtemplate"* with optional valida
             "description" : STRING                        // OPTIONAL: A user friendly description of the requirements for the field.
           }
         }
+      ],
+      "validation" :                                        // OPTIONAL: Record-wide validation
+      {
+        "validator"   : STRING                              // REQUIRED: The name/type of the validator
+        "settings"    : OBJECT,                             // OPTIONAL: Each type of validator will have defaults. See description for each validator.
+        "description" : STRING,                             // OPTIONAL: A user friendly description of the requirements for the field.
       }
-    ],
-    "validation" :                                        // OPTIONAL: Record-wide validation
-    {
-      "validator"   : STRING                              // REQUIRED: The name/type of the validator
-      "settings"    : OBJECT,                             // OPTIONAL: Each type of validator will have defaults. See description for each validator.
-      "description" : STRING,                             // OPTIONAL: A user friendly description of the requirements for the field.
-    }
   }
 ```
+Even though both "href" and "fields" are listed as **OPTIONAL** it is **REQUIRED** to have at least one of them. It is, however, **RECOMMENDED** to have only "href" to which a GET should return a compactcollection+json document with just this one WRITETEMPLATE in "writetemplates".
+
 Even though the *"validator"* is **REQUIRED**, it is only **REQUIRED** as part of *"validation"*, which is **OPTIONAL**.
 
 If a client does not support a specific validator, it **SHOULD**  skip that validation and assume that the data are valid. It is up to the server to return a reasonable error message if the validation fails server side.
 
-##### "querytemplate"
+##### "querytemplates" : [QUERYTEMPLATE]
 
-A *"querytemplate"* is part of the *"queries"* section, which defines specific item queries that can be sent to the server.
-Just as a *"writetemplate"* can have validators given the same applies to a *"querytemplate"*
+A *"QUERYTEMPLATE"* is part of the *"querytemplates"* section, which defines specific item queries that can be sent to the server.
+Just as a *WRITETEMPLATE* can have validators given the same applies to a *QUERYTEMPLATE*
 
 ```json
   "querytemplate" :
@@ -187,24 +190,46 @@ Just as a *"writetemplate"* can have validators given the same applies to a *"qu
 
   ]
 
-### Error Object
+### "error" : ERROR
 
 When an error happens on the server, it is vital to be able to advise the user on how to proceed. The *"error"* field provides a load of properties to help with this.
 [HTTP status code](http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html)
 
 ```json
-  "error":                                        // OPTIONAL
+  "error":                                 // OPTIONAL
   {
-    "code"       : INT,                           // REQUIRED: The HTTP status code, which **SHOULD** be the same as returned in the HTTP document containing the JSON
-    "message"    : STRING,                        // OPTIONAL: User friendly description of the problem
-    "errorclass" : STRING,                        // OPTIONAL: The error class, default **MUST** be "UNRECOVERABLE"
-    "detailedErrorClass" : STRING,                // OPTIONAL: Detailed error class, e.g. "TIMEOUT", default is empty
-    "messageid"  : STRING,                        // OPTIONAL: Message/log id for the log message which may have been logged for the error, can be used to correlate interaction with support.
-    "correlationid" : STRING,                     // OPTIONAL: message/log correlation id for the log message which may have been logged for the error",
-    "extended"   : OBJECT,                        // OPTIONAL: extended error data, the contents of which depends on *"detailederrorclass"*
-    "links"      : [LINK]                         // OPTIONAL: Navigational links to aid the client in escaping the error.
+    "code"               : INT,            // REQUIRED: The HTTP status code, which **SHOULD** be the same as returned in the HTTP document containing the JSON
+    "message"            : STRING,         // OPTIONAL: User friendly description of the problem
+    "errorclass"         : STRING,         // OPTIONAL: The error class, default **MUST** be "UNRECOVERABLE"
+    "detailedErrorClass" : STRING,         // OPTIONAL: Detailed error class, e.g. "TIMEOUT", default is empty
+    "messageid"          : STRING,         // OPTIONAL: Message/log id for the log message which may have been logged for the error, can be used to correlate interaction with support.
+    "correlationid"      : STRING,         // OPTIONAL: message/log correlation id for the log message which may have been logged for the error",
+    "extended"           : OBJECT,         // OPTIONAL: extended error data, the contents of which depends on *"detailederrorclass"*
+    "links"              : [LINK]          // OPTIONAL: Navigational links to aid the client in escaping the error.
   }
 ```
+
+#### Error Classes
+
+There are, basically [three different error classes](http://softwarepassion.eu/error-handling-the-easy-way/):
+
+  - Unrecoverable
+  - Recoverable
+  - Userrecoverable
+
+"errorClass" MUST be one of those three values and it MUST NOT be case-sensitive. The DEFAULT, if left out, is "Unrecoverable".
+
+There are many more detailed error classes, all of which can be grouped under one of the main error classes above, e.g.
+
+  - Authorization
+  - Timeout
+  - Invaliddata
+
+Each application is free to define their own detailed error classes as they see fit.
+
+### TYPE
+
+Description of types.
 
 ### Validators
 
