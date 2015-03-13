@@ -18,23 +18,24 @@ Torben Rahbek Koch (torben@rahbekkoch.dk)
 
 Definitely a work *in progress*.
 
+## Mime Type
+
+ - application/vnd.compactcollection+json
+
 ## Overview
 
 The format is a JSON-based format with several optional fields:
 
 ```json
 {
-  "compactcollection" :                  // REQUIRED: "compactcollection" to distinguish from Collection+JSON, even though the Content Type should ensure that.
-  {
-    "version"         : "1.0",           // OPTIONAL: The version of the format. If missing it **MUST** default to *"1.0"*
-    "href"            : URI,             // OPTIONAL: The uri of the entire document. If missing it MUST default to the uri used to request the document.
-    "links"           : [LINK],          // OPTIONAL: Navigational links
-    "items"           : [ITEM],          // OPTIONAL: The data. MUST default to an empty array.
-    "itemtemplate"    : ITEMTEMPLATE,    // OPTIONAL: A description of an item in "items"
-    "writetemplates"  : [WRITETEMPLATE], // OPTIONAL: A description of add and update (generally POST and PUT) statements  
-    "querytemplates"  : [QUERYTEMPLATE], // OPTIONAL: Query templates
-    "error"           : ERROR            // OPTIONAL: A description of any error that caused a request to fail
-  }
+  "version"         : "1.0",           // OPTIONAL: The version of the format. If missing it **MUST** default to *"1.0"*
+  "href"            : URI,             // OPTIONAL: The uri of the entire document. If missing it MUST default to the uri used to request the document.
+  "links"           : [LINK],          // OPTIONAL: Navigational links
+  "items"           : [ITEM],          // OPTIONAL: The data. MUST default to an empty array.
+  "itemtemplate"    : ITEMTEMPLATE,    // OPTIONAL: A description of an item in "items"
+  "writetemplates"  : [WRITETEMPLATE], // OPTIONAL: A description of add and update (generally POST and PUT) statements  
+  "querytemplates"  : [QUERYTEMPLATE], // OPTIONAL: Query templates
+  "error"           : ERROR            // OPTIONAL: A description of any error that caused a request to fail
 }
 ```
 If none of the **OPTIONAL** elements are present, *"items"* MUST default to an empty array.
